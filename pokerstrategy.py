@@ -1,5 +1,6 @@
 from pokertrees import *
 import random
+import numpy as np
 
 def choose(n, k):
     """
@@ -19,7 +20,7 @@ def choose(n, k):
 class Strategy(object):
     def __init__(self, player, filename=None):
         self.player = player
-        self.policy = {}
+        self.policy = {}  # private infoset view to action probs
         if filename is not None:
             self.load_from_file(filename)
 
@@ -30,13 +31,13 @@ class Strategy(object):
             if test_node.player == self.player:
                 for node in infoset:
                     prob = 1.0 / float(len(node.children))
-                    probs = [0,0,0]
+                    probs = np.zeros(3, np.longdouble)
                     for action in range(3):
                         if node.valid(action):
                             probs[action] = prob
                     if type(node.player_view) is tuple:
                         for pview in node.player_view:
-                            self.policy[pview] = [x for x in probs]
+                            self.policy[pview] = np.copy(probs)
                     else:
                         self.policy[node.player_view] = probs
 
@@ -46,16 +47,16 @@ class Strategy(object):
             test_node = infoset[0]
             if test_node.player == self.player:
                 for node in infoset:
-                    probs = [0 for _ in range(3)]
+                    probs = np.zeros(3, np.longdouble)
                     total = 0
                     for action in range(3):
                         if node.valid(action):
                             probs[action] = random.random()
                             total += probs[action]
-                    probs = [x / total for x in probs]
+                    probs /= total
                     if type(node.player_view) is tuple:
                         for pview in node.player_view:
-                            self.policy[pview] = [x for x in probs]
+                            self.policy[pview] = np.copy(probs)
                     else:
                         self.policy[node.player_view] = probs
 
@@ -68,10 +69,11 @@ class Strategy(object):
         probs = self.policy[infoset]
         val = random.random()
         total = 0
-        for i,p in enumerate(probs):
+        iter = np.nditer(probs)
+        for p in iter:
             total += p
             if p > 0 and val <= total:
-                return i
+                return iter.index
         raise Exception('Invalid probability distribution. Infoset: {0} Probs: {1}'.format(infoset, probs))
 
     def load_from_file(self, filename):
@@ -84,7 +86,7 @@ class Strategy(object):
             tokens = line.split(' ')
             assert(len(tokens) == 4)
             key = tokens[0]
-            probs = [float(x) for x in reversed(tokens[1:])]
+            probs = np.array([float(x) for x in reversed(tokens[1:])], np.longdouble)
             self.policy[key] = probs
 
     def save_to_file(self, filename):
@@ -116,34 +118,6 @@ class StrategyProfile(object):
         for ev in expected_values:
             assert(len(ev) == 1)
         return tuple(next(iter(ev.values())) for ev in expected_values) # pull the EV from the dict returned
-
-    def old_ev_helper(self, root, pathprobs):
-        if type(root) is TerminalNode:
-            return self.ev_terminal_node(root, reachprobs)
-        if type(root) is HolecardChanceNode or type(root) is BoardcardChanceNode:
-            payoffs = [0] * self.rules.players
-            prob = pathprob / float(len(root.children))
-            for child in root.children:
-                subpayoffs = self.ev_helper(child, prob)
-                for i,p in enumerate(subpayoffs):
-                    payoffs[i] += p
-            return payoffs
-        # Otherwise, it's an ActionNode
-        probs = self.strategies[root.player].probs(root.player_view)
-        payoffs = [0] * self.rules.players
-        if root.fold_action and probs[FOLD] > 0.0000000001:
-            subpayoffs = self.ev_helper(root.fold_action, pathprob * probs[FOLD])
-            for i,p in enumerate(subpayoffs):
-                payoffs[i] += p
-        if root.call_action and probs[CALL] > 0.0000000001:
-            subpayoffs = self.ev_helper(root.call_action, pathprob * probs[CALL])
-            for i,p in enumerate(subpayoffs):
-                payoffs[i] += p
-        if root.raise_action and probs[RAISE] > 0.0000000001:
-            subpayoffs = self.ev_helper(root.raise_action, pathprob * probs[RAISE])
-            for i,p in enumerate(subpayoffs):
-                payoffs[i] += p
-        return payoffs
 
     def ev_helper(self, root, reachprobs):
         if type(root) is TerminalNode:
@@ -336,6 +310,3 @@ class StrategyProfile(object):
             max_strategy.policy[infoset] = probs
             player_payoffs[hc] = max_value
         return player_payoffs
-
-
-

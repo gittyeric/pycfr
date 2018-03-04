@@ -55,10 +55,12 @@ class RoundInfo(object):
         self.maxbets = maxbets
 
 class GameTree(object):
-    def __init__(self, rules):
+    def __init__(self, rules, max_street_depth=sys.maxsize, max_depth_approximator=None):
         self.rules = deepcopy(rules)
         self.information_sets = {}
         self.root = None
+        self.max_depth = max_street_depth
+        self.max_depth_approx = max_depth_approximator
 
     def build(self):
         # Assume everyone is in
@@ -71,7 +73,7 @@ class GameTree(object):
         holes = [()] * self.rules.players
         board = ()
         bet_history = ""
-        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, bets, next_player)
+        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, 0, bets, next_player)
 
     def collect_blinds(self, committed, bets, next_player):
         if self.rules.blinds != None:
@@ -88,6 +90,8 @@ class GameTree(object):
     def build_rounds(self, root, players_in, committed, holes, board, deck, bet_history, round_idx, bets = None, next_player = 0):
         if round_idx == len(self.rules.roundinfo):
             return self.showdown(root, players_in, committed, holes, board, deck, bet_history)
+        elif round_idx == self.max_depth:
+            return self.max_depth_approx(root, players_in, committed, holes, board, deck, bet_history)
         bet_history += "/"
         cur_round = self.rules.roundinfo[round_idx]
         while not players_in[next_player]:
@@ -250,7 +254,7 @@ class PublicTree(GameTree):
         holes = [[()]] * self.rules.players
         board = ()
         bet_history = ""
-        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, bets, next_player)
+        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, 0, bets, next_player)
 
 
     def build_holecards(self, root, next_player, players_in, committed, holes, board, deck, bet_history, round_idx, min_actions_this_round, actions_this_round, bets):

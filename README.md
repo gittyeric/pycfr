@@ -1,3 +1,17 @@
+pyCFR Fast (Development in progress)
+
+This is a branch of pyCFR tuned specifically to Limit Texas Holdem.  It improves on yet limits the original pyCFR implementation in the following ways:
+
+- Uses Python 3 instead of 2
+- Uses numpy in vanilla CFR (other flavors TODO) for much faster matrix operations
+- Supports depth-limited CFR.  Once going beyond max street depth, it relies on an approximation function to make CFR tractable for large games like LTHE.
+
+TODO for full pyCFR support:
+
+- Fix pokercfr.py's PCSCFR, CSCFR and OSCFR classes to use numpy arrays so their corresponding tests work.
+
+Original pyCFR README:
+
 pyCFR
 =====
 

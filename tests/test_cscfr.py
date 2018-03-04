@@ -28,7 +28,6 @@ for block in range(blocks):
     print('Total exploitability: {0}'.format(sum(result[1])))
 print(cfr.profile.strategies[0].policy)
 print(cfr.profile.strategies[1].policy)
-print(cfr.counterfactual_regret)
 print('Verifying P1 policy')
 assert(near(cfr.profile.strategies[0].policy['Q:/:'][CALL], 2.0 / 3.0, 0.01))
 assert(near(cfr.profile.strategies[0].policy['Q:/:'][RAISE], 1.0 / 3.0, 0.01))
