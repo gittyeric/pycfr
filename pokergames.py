@@ -1,6 +1,29 @@
 from pokertrees import *
 from card import *
 
+def holdem_eval(hc, board):
+    assert(False) # Not supported yet
+    return hc[0].rank
+
+def holdem_rules(players):
+    deck = []
+    for rank in range(2, 15):
+        for suit in range(1, 5):
+            deck.append(Card(rank, suit))
+    ante = 0
+    blinds = [1, 2]
+    rounds = [RoundInfo(holecard_count=2, boardcard_count=0, betsize=1, maxbets=[1, 0]),
+              RoundInfo(holecard_count=0, boardcard_count=3, betsize=1, maxbets=[1, 0]),
+              RoundInfo(holecard_count=0, boardcard_count=1, betsize=1, maxbets=[1, 0]),
+              RoundInfo(holecard_count=0, boardcard_count=1, betsize=1, maxbets=[1, 0])]
+    return GameRules(players, deck, rounds, ante, blinds, handeval=holdem_eval, infoset_format=holdem_format)
+
+def holdem_format(player, holecards, board, bet_history):
+    cards = ""
+    for card in (holecards + board):
+        cards += Card.RANK_TO_STRING[card.rank] + Card.SUIT_TO_STRING[card.suit]
+    return "{0}:{1}:".format(cards, bet_history)
+
 def kuhn_eval(hc, board):
     return hc[0].rank
 

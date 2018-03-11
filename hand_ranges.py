@@ -12,26 +12,28 @@ def sort_cards(cards):
 
     assert(False) # No support yet for true sorting beyond 2 cards
 
-def range_size(hole_count):
+def range_size(rules):
+    hole_count = rules.roundinfo[0].holecard_count
     if hole_count == 1:
-        return 52
+        return len(rules.deck)
     elif hole_count == 2:
         return (52*51)/2
 
     assert(False)
 
-def cards_to_range_index(cards):
+def cards_to_range_index(rules, cards):
     if len(cards) == 2:
         return cards_to_range_index_2(cards)
     elif len(cards) == 1:
-        return cards_to_range_index_1(cards)
+        return cards_to_range_index_1(rules, cards)
     assert(False)
 
-def range_index_to_cards(hole_count, index):
+def range_index_to_cards(rules, index):
+    hole_count = rules.roundinfo[0].holecard_count
     if hole_count == 2:
         return range_index_to_cards_2(index)
     elif hole_count == 1:
-        return range_index_to_cards_1(index)
+        return range_index_to_cards_1(rules, index)
     assert (False)
 
 # Break down into 13 x 102 dual index (exclude Ace for left card)
@@ -60,9 +62,12 @@ def cards_to_range_index_2(cards):
     assert(False)
 
 @lru_cache(maxsize=int(52))
-def cards_to_range_index_1(cards):
-    c_index = (((cards[0].rank - 2) * 4) + (cards[0].suit - 1))
-    return c_index
+def cards_to_range_index_1(rules, cards):
+    card = cards[0]
+    for i in range(0, len(rules.deck)):
+        if rules.deck[i] == card:
+            return i
+    assert(False)
 
 @lru_cache(maxsize=int(52*51/2))
 def range_index_to_cards_2(index):
@@ -115,10 +120,8 @@ def range_index_to_cards_2(index):
             count_so_far += 1
 
 @lru_cache(maxsize=52)
-def range_index_to_cards_1(index):
-    i_suit = index % 4 + 1
-    i_rank = int((index >> 2)) + 2
-    return (Card(i_rank, i_suit),)
+def range_index_to_cards_1(rules, index):
+    return (rules.deck[index],)
 
 # @lru_cache(maxsize=52*52)
 # def build_player_ranges(rules, known_cards):
