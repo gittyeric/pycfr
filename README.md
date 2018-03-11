@@ -9,6 +9,7 @@ This is a branch of pyCFR tuned specifically to Limit Texas Holdem.  It improves
 TODO for full pyCFR support:
 
 - Fix pokercfr.py's PCSCFR, CSCFR and OSCFR classes to use numpy arrays so their corresponding tests work.
+- Update old holecard range logic to support games where holecard events are not necessarily the first game event
 
 Original pyCFR README:
 

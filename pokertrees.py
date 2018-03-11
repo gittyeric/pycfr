@@ -2,9 +2,15 @@ from itertools import combinations
 from itertools import permutations
 from itertools import product
 from collections import Counter
+
+from card import Card
 from hand_evaluator import HandEvaluator
 from copy import deepcopy
 from functools import partial
+import sys
+import numpy as np
+import math
+from functools import lru_cache
 
 FOLD = 0
 CALL = 1
@@ -48,9 +54,9 @@ class GameRules(object):
         self.infoset_format = infoset_format
 
 class RoundInfo(object):
-    def __init__(self, holecards, boardcards, betsize, maxbets):
-        self.holecards = holecards
-        self.boardcards = boardcards
+    def __init__(self, holecard_count, boardcard_count, betsize, maxbets):
+        self.holecard_count = holecard_count
+        self.boardcards = boardcard_count
         self.betsize = betsize
         self.maxbets = maxbets
 
@@ -100,7 +106,7 @@ class GameTree(object):
             bets = [0] * self.rules.players
         min_actions_this_round = players_in.count(True)
         actions_this_round = 0
-        if cur_round.holecards:
+        if cur_round.holecard_count:
             return self.build_holecards(root, next_player, players_in, committed, holes, board, deck, bet_history, round_idx, min_actions_this_round, actions_this_round, bets)
         if cur_round.boardcards:
             return self.build_boardcards(root, next_player, players_in, committed, holes, board, deck, bet_history, round_idx, min_actions_this_round, actions_this_round, bets)
@@ -114,9 +120,9 @@ class GameTree(object):
 
     def build_holecards(self, root, next_player, players_in, committed, holes, board, deck, bet_history, round_idx, min_actions_this_round, actions_this_round, bets):
         cur_round = self.rules.roundinfo[round_idx]
-        hnode = HolecardChanceNode(root, committed, holes, board, self.rules.deck, "", cur_round.holecards)
+        hnode = HolecardChanceNode(root, committed, holes, board, self.rules.deck, "", cur_round.holecard_count)
         # Deal holecards
-        all_hc = self.deal_holecards(deck, cur_round.holecards, players_in.count(True))
+        all_hc = self.deal_holecards(deck, cur_round.holecard_count, players_in.count(True))
         # Create a child node for every possible distribution
         for cur_holes in all_hc:
             dealt_cards = ()
@@ -231,10 +237,10 @@ class GameTree(object):
             payoffs[w] += payoff
         return TerminalNode(root, committed, holes, board, deck, bet_history, payoffs, players_in)
 
-    def holecard_distributions(self):
-        x = Counter(combinations(self.rules.deck, self.holecards))
-        d = float(sum(x.values()))
-        return list(zip(list(x.keys()),[y / d for y in list(x.values())]))
+    # def holecard_distributions(self):
+    #     x = Counter(combinations(self.rules.deck, self.holecards))
+    #     d = float(sum(x.values()))
+    #     return list(zip(list(x.keys()),[y / d for y in list(x.values())]))
 
 def multi_infoset_format(base_infoset_format, player, holecards, board, bet_history):
     return tuple([base_infoset_format(player, hc, board, bet_history) for hc in holecards])
@@ -254,14 +260,14 @@ class PublicTree(GameTree):
         holes = [[()]] * self.rules.players
         board = ()
         bet_history = ""
-        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, 0, bets, next_player)
+        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, bets, next_player)
 
 
     def build_holecards(self, root, next_player, players_in, committed, holes, board, deck, bet_history, round_idx, min_actions_this_round, actions_this_round, bets):
         cur_round = self.rules.roundinfo[round_idx]
-        hnode = HolecardChanceNode(root, committed, holes, board, self.rules.deck, "", cur_round.holecards)
+        hnode = HolecardChanceNode(root, committed, holes, board, self.rules.deck, "", cur_round.holecard_count)
         # Deal holecards
-        all_hc = list(combinations(deck, cur_round.holecards))
+        all_hc = list(combinations(deck, cur_round.holecard_count))
         updated_holes = []
         for player in range(self.rules.players):
             if not players_in[player]:

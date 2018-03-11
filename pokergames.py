@@ -9,7 +9,7 @@ def half_street_kuhn_rules():
     deck = [Card(14,1),Card(13,1),Card(12,1)]
     ante = 1
     blinds = None
-    rounds = [RoundInfo(holecards=1,boardcards=0,betsize=1,maxbets=[1,0])]
+    rounds = [RoundInfo(holecard_count=1, boardcard_count=0, betsize=1, maxbets=[1, 0])]
     return GameRules(players, deck, rounds, ante, blinds, handeval=kuhn_eval, infoset_format=leduc_format)
 
 def half_street_kuhn_gametree():
@@ -29,7 +29,7 @@ def kuhn_rules():
     deck = [Card(14,1),Card(13,1),Card(12,1)]
     ante = 1
     blinds = None
-    rounds = [RoundInfo(holecards=1,boardcards=0,betsize=1,maxbets=[1,1])]
+    rounds = [RoundInfo(holecard_count=1, boardcard_count=0, betsize=1, maxbets=[1, 1])]
     return GameRules(players, deck, rounds, ante, blinds, handeval=kuhn_eval, infoset_format=leduc_format) 
 
 def kuhn_gametree():
@@ -61,7 +61,7 @@ def leduc_rules():
     deck = [Card(13,1),Card(13,2),Card(12,1),Card(12,2),Card(11,1),Card(11,2)]
     ante = 1
     blinds = None
-    rounds = [RoundInfo(holecards=1,boardcards=0,betsize=2,maxbets=[2,2]),RoundInfo(holecards=0,boardcards=1,betsize=4,maxbets=[2,2])]
+    rounds = [RoundInfo(holecard_count=1, boardcard_count=0, betsize=2, maxbets=[2, 2]), RoundInfo(holecard_count=0, boardcard_count=1, betsize=4, maxbets=[2, 2])]
     return GameRules(players, deck, rounds, ante, blinds, handeval=leduc_eval, infoset_format=leduc_format)
 
 def leduc_gametree():
@@ -108,9 +108,9 @@ def royal_rules():
     deck = [Card(14,1),Card(14,2),Card(13,1),Card(13,2),Card(12,1),Card(12,2),Card(11,1),Card(11,2)]
     ante = 1
     blinds = None
-    preflop = RoundInfo(holecards=1,boardcards=0,betsize=2,maxbets=[2,2])
-    flop = RoundInfo(holecards=0,boardcards=1,betsize=4,maxbets=[2,2])
-    turn = RoundInfo(holecards=0,boardcards=1,betsize=4,maxbets=[2,2])
+    preflop = RoundInfo(holecard_count=1, boardcard_count=0, betsize=2, maxbets=[2, 2])
+    flop = RoundInfo(holecard_count=0, boardcard_count=1, betsize=4, maxbets=[2, 2])
+    turn = RoundInfo(holecard_count=0, boardcard_count=1, betsize=4, maxbets=[2, 2])
     rounds = [preflop,flop,turn]
     return GameRules(players, deck, rounds, ante, blinds, handeval=royal_eval, infoset_format=royal_format)
 

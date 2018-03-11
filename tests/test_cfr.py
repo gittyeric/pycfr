@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 sys.path.insert(0,os.path.realpath('.'))
 from pokerstrategy import *
 from pokergames import *
@@ -15,6 +16,8 @@ print('')
 print('')
 
 print('Computing NE for Half-Street Kuhn poker')
+
+start_secs = int(time.time())
 
 hskuhn = half_street_kuhn_rules()
 cfr = CounterfactualRegretMinimizer(hskuhn)
@@ -62,3 +65,7 @@ for block in range(blocks):
     print('Total exploitability: {0}'.format(sum(result[1])))
 print('Done!')
 print('')
+
+end_secs = int(time.time())
+
+print('Total runtime: ' + str(end_secs - start_secs))

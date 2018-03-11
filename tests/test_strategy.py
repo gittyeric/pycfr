@@ -24,7 +24,7 @@ players = 2
 deck = [Card(14,1),Card(13,1),Card(12,1),Card(11,1)]
 ante = 1
 blinds = None
-rounds = [RoundInfo(holecards=1,boardcards=1,betsize=1,maxbets=[0,0])]
+rounds = [RoundInfo(holecard_count=1, boardcard_count=1, betsize=1, maxbets=[0, 0])]
 no_action_rules = GameRules(players, deck, rounds, ante, blinds, handeval=leduc_eval, infoset_format=leduc_format)
 no_action_gametree = GameTree(no_action_rules)
 no_action_gametree.build()
