@@ -47,25 +47,49 @@ class CounterfactualRegretMinimizer(object):
             return self.cfr_boardcard_node(root, reachprobs)
         return self.cfr_action_node(root, reachprobs)
 
-    def cfr_terminal_node(self, root, reachprobs):
-        payoffs = [None for _ in range(self.rules.players)]
+    def is_possible(self, my_hand_index, opp_hand_index, board):
+        pass
+
+    def cfr_fast_terminal_node(self, root, reachprobs):
+        # payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
         for player in range(self.rules.players):
-            player_payoffs = {hc: 0 for hc in root.holecards[player]}
-            counts = {hc: 0 for hc in root.holecards[player]}
+            opps_reach_probs = np.ones((range_size(self.rules)), np.longdouble)
+            for opponent in range(self.rules.players):
+                if opponent != player:
+                    opps_reach_probs *= reachprobs[opponent]
+
+            # new_payoffs = np.ones( range_size(self.rules), np.longdouble )
+
+
+            win_sum = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
+            counts = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
+            for my_hand_index in range(range_size(self.rules)):
+                for opp_hand_index in range(range_size(self.rules)):
+                    if self.is_possible(my_hand_index, opp_hand_index, root.board):
+                        for opponent in range(self.rules.players):
+                            if opponent != player:
+                                counts[player][my_hand_index] += 1
+                                win_sum += root
+
+        return win_sum / counts
+
+    def cfr_terminal_node(self, root, reachprobs):
+        payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
+        for player in range(self.rules.players):
+            counts = np.zeros((range_size(self.rules)), np.longdouble)
             for hands, winnings in list(root.payoffs.items()):
                 prob = 1.0
                 player_hc = None
                 for opp, hc in enumerate(hands):
                     if opp == player:
-                        player_hc = hc
+                        player_hc = cards_to_range_index(self.rules, hc)
                     else:
                         prob *= reachprobs[opp][cards_to_range_index(self.rules, hc)]
-                player_payoffs[player_hc] += prob * winnings[player]
+                payoffs[player][player_hc] += prob * winnings[player]
                 counts[player_hc] += 1
-            for hc, count in list(counts.items()):
-                if count > 0:
-                    player_payoffs[hc] /= float(count)
-            payoffs[player] = player_payoffs
+
+            counts = counts.clip(min=1, max=sys.maxsize)
+            payoffs[player] /= counts
         return payoffs
 
     def cfr_holecard_node(self, root, reachprobs):
@@ -74,24 +98,16 @@ class CounterfactualRegretMinimizer(object):
         possible_deals = float(choose(len(root.deck) - prevlen, root.todeal))
 
         next_reachprobs = reachprobs / possible_deals
-        subpayoffs = self.cfr_helper(root.children[0], next_reachprobs)
-        payoffs = [{hc: 0 for hc in root.holecards[player]} for player in range(self.rules.players)]
-        for player, subpayoff in enumerate(subpayoffs):
-            for hand, winnings in list(subpayoff.items()):
-                hc = hand[0:prevlen]
-                payoffs[player][hc] += winnings
-        return payoffs
+        return self.cfr_helper(root.children[0], next_reachprobs)
 
     def cfr_boardcard_node(self, root, reachprobs):
         prevlen = 0 # Old op was pricey: len(list(reachprobs[0].keys())[0])
         possible_deals = float(choose(len(root.deck) - prevlen, root.todeal))
-        payoffs = [{hc: 0 for hc in root.holecards[player]} for player in range(self.rules.players)]
+        payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
         for bc in root.children:
             next_reachprobs = reachprobs / possible_deals
             subpayoffs = self.cfr_helper(bc, next_reachprobs)
-            for player, subpayoff in enumerate(subpayoffs):
-                for hand, winnings in list(subpayoff.items()):
-                    payoffs[player][hand] += winnings
+            payoffs += subpayoffs
         return payoffs
 
     def cfr_action_node(self, root, reachprobs):
@@ -105,7 +121,7 @@ class CounterfactualRegretMinimizer(object):
             cards = range_index_to_cards(self.rules, iter.index)
             p_view = self.rules.infoset_format(root.player, cards, root.board, root.bet_history)
             action_probs[iter.index] = strategy.probs(p_view)
-        action_payoffs = [None, None, None]
+        action_payoffs = np.zeros((3, self.rules.players, range_size(self.rules)), np.longdouble)
 
         if root.fold_action:
             iter = np.nditer(reachprobs[root.player], flags=['f_index'])
@@ -125,22 +141,22 @@ class CounterfactualRegretMinimizer(object):
                 hc = iter.index
                 next_reachprobs[root.player][hc] = action_probs[hc][RAISE] * p
             action_payoffs[RAISE] = self.cfr_helper(root.raise_action, next_reachprobs)
-        payoffs = []
+        payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
         for player in range(self.rules.players):
-            player_payoffs = {}
-            iter = np.nditer(reachprobs[player], flags=['f_index'])
-            for p in iter:
-                player_payoffs[range_index_to_cards(self.rules, iter.index)] = 0
-            for action, subpayoff in enumerate(action_payoffs):
-                if subpayoff is None:
-                    continue
-                for hc, winnings in subpayoff[player].items():
+            # iter = np.nditer(reachprobs[player], flags=['f_index'])
+            # for p in iter:
+            #     payoffs[player][iter.index] = 0
+
+            for action in range(3):
+                if not root.valid(action):
+                   continue
+                for hand_index in range( range_size(self.rules) ):
+                    winnings = action_payoffs[action][player][hand_index]
                     # action_probs is baked into reachprobs for everyone except the acting player
                     if player == root.player:
-                        player_payoffs[hc] += winnings * action_probs[cards_to_range_index(self.rules, hc)][action]
+                        payoffs[player][hand_index] += winnings * action_probs[hand_index][action]
                     else:
-                        player_payoffs[hc] += winnings
-            payoffs.append(player_payoffs)
+                        payoffs[player][hand_index] += winnings
         # Update regret calculations
         self.cfr_regret_update(root, action_payoffs, payoffs[root.player])
         return payoffs
@@ -172,13 +188,14 @@ class CounterfactualRegretMinimizer(object):
 
     # Todo: optimize!!!
     def cfr_regret_update(self, root, action_payoffs, ev):
-        for i, subpayoff in enumerate(action_payoffs):
-            if subpayoff is None:
+        for action in range(3):
+            if not root.valid(action):
                 continue
-            for hc, winnings in subpayoff[root.player].items():
-                immediate_cfr = winnings - ev[hc]
-                infoset = self.rules.infoset_format(root.player, hc, root.board, root.bet_history)
-                self.counterfactual_regret[infoset][root.player][i] += immediate_cfr
+            for hand_index in range( range_size(self.rules) ):
+                winnings = action_payoffs[action][root.player][hand_index]
+                immediate_cfr = winnings - ev[hand_index]
+                infoset = self.rules.infoset_format(root.player, range_index_to_cards(self.rules, hand_index), root.board, root.bet_history)
+                self.counterfactual_regret[infoset][root.player][action] += immediate_cfr
 
     def equal_probs(self, root):
         total_actions = len(root.children)

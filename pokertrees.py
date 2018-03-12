@@ -12,6 +12,8 @@ import numpy as np
 import math
 from functools import lru_cache
 
+from hand_ranges import cards_to_range_index, range_size, range_index_to_cards
+
 FOLD = 0
 CALL = 1
 RAISE = 2
@@ -79,7 +81,7 @@ class GameTree(object):
         holes = [()] * self.rules.players
         board = ()
         bet_history = ""
-        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, 0, bets, next_player)
+        self.root = self.build_rounds(None, players_in, committed, holes, board, self.rules.deck, bet_history, 0, bets, next_player)
 
     def collect_blinds(self, committed, bets, next_player):
         if self.rules.blinds != None:
@@ -217,25 +219,26 @@ class GameTree(object):
         committed[root.player] = prev_commit
 
     def showdown(self, root, players_in, committed, holes, board, deck, bet_history):
-        if players_in.count(True) == 1:
-            winners = [i for i,v in enumerate(players_in) if v]
-        else:
-            scores = [self.rules.handeval(hc, board) for hc in holes]
-            winners = []
-            maxscore = -1
-            for i,s in enumerate(scores):
-                if players_in[i]:
-                    if len(winners) == 0 or s > maxscore:
-                        maxscore = s
-                        winners = [i]
-                    elif s == maxscore:
-                        winners.append(i)
-        pot = sum(committed)
-        payoff = pot / float(len(winners))
-        payoffs = [-x for x in committed]
-        for w in winners:
-            payoffs[w] += payoff
-        return TerminalNode(root, committed, holes, board, deck, bet_history, payoffs, players_in)
+        assert (False)  # unsupported for now
+        # if players_in.count(True) == 1:
+        #     winners = [i for i,v in enumerate(players_in) if v]
+        # else:
+        #     scores = [self.rules.handeval(hc, board) for hc in holes]
+        #     winners = []
+        #     maxscore = -1
+        #     for i,s in enumerate(scores):
+        #         if players_in[i]:
+        #             if len(winners) == 0 or s > maxscore:
+        #                 maxscore = s
+        #                 winners = [i]
+        #             elif s == maxscore:
+        #                 winners.append(i)
+        # pot = sum(committed)
+        # payoff = pot / float(len(winners))
+        # payoffs = [-x for x in committed]
+        # for w in winners:
+        #     payoffs[w] += payoff
+        # return TerminalNode(root, committed, holes, board, deck, bet_history, payoffs, players_in)
 
     # def holecard_distributions(self):
     #     x = Counter(combinations(self.rules.deck, self.holecards))
@@ -312,19 +315,23 @@ class PublicTree(GameTree):
         # - Pre-order list of hands
         pot = sum(committed)
         showdowns_possible = self.showdown_combinations(holes)
+        hands_possible = range_size(self.rules)
         if players_in.count(True) == 1:
             fold_payoffs = [-x for x in committed]
             fold_payoffs[players_in.index(True)] += pot
-            payoffs = { hands: fold_payoffs for hands in showdowns_possible }
+            payoffs = { hands: fold_payoffs for hands in showdowns_possible } #TODO
         else:
-            scores = {}
-            for i in range(self.rules.players):
-                if players_in[i]:
-                    for hc in holes[i]:
-                        if not (hc in scores):
-                            scores[hc] = self.rules.handeval(hc, board)
+            scores = self.get_terminal_win_probs(hands_possible, board)
             payoffs = { hands: self.calc_payoffs(hands, scores, players_in, committed, pot) for hands in showdowns_possible }
         return TerminalNode(root, committed, holes, board, deck, bet_history, payoffs, players_in)
+
+    @lru_cache(52*52)
+    def get_terminal_win_probs(self, hands_possible, board):
+        scores = np.zeros(hands_possible, np.longdouble)
+        for hand_index in range(0, hands_possible):
+            if scores[hand_index] == 0:
+                scores[hand_index] = self.rules.handeval(range_index_to_cards(self.rules, hand_index), board)
+        return scores
 
     def showdown_combinations(self, holes):
         # Get all the possible holecard matchups for a given showdown.
@@ -336,7 +343,7 @@ class PublicTree(GameTree):
         maxscore = -1
         for i,hand in enumerate(hands):
             if players_in[i]:
-                s = scores[hand]
+                s = scores[cards_to_range_index(self.rules, hand)]
                 if len(winners) == 0 or s > maxscore:
                     maxscore = s
                     winners = [i]
