@@ -341,14 +341,14 @@ class PublicTree(GameTree):
     def calc_payoffs(self, hands, scores, players_in, committed, pot):        
         winners = []
         maxscore = -1
-        for i,hand in enumerate(hands):
-            if players_in[i]:
+        for player,hand in enumerate(hands):
+            if players_in[player]:
                 s = scores[cards_to_range_index(self.rules, hand)]
                 if len(winners) == 0 or s > maxscore:
                     maxscore = s
-                    winners = [i]
+                    winners = [player]
                 elif s == maxscore:
-                    winners.append(i)
+                    winners.append(player)
         payoff = pot / float(len(winners))
         payoffs = [-x for x in committed]
         for w in winners:

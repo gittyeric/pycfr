@@ -68,7 +68,7 @@ class CounterfactualRegretMinimizer(object):
                     if self.is_possible(my_hand_index, opp_hand_index, root.board):
                         for opponent in range(self.rules.players):
                             if opponent != player:
-                                counts[player][my_hand_index] += 1
+                                counts[player, my_hand_index] += 1
                                 win_sum += root
 
         return win_sum / counts
@@ -77,6 +77,8 @@ class CounterfactualRegretMinimizer(object):
         payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
         for player in range(self.rules.players):
             counts = np.zeros((range_size(self.rules)), np.longdouble)
+
+            # For EVERY terminal state
             for hands, winnings in list(root.payoffs.items()):
                 prob = 1.0
                 player_hc = None
@@ -84,8 +86,8 @@ class CounterfactualRegretMinimizer(object):
                     if opp == player:
                         player_hc = cards_to_range_index(self.rules, hc)
                     else:
-                        prob *= reachprobs[opp][cards_to_range_index(self.rules, hc)]
-                payoffs[player][player_hc] += prob * winnings[player]
+                        prob *= reachprobs[opp, cards_to_range_index(self.rules, hc)]
+                payoffs[player, player_hc] += prob * winnings[player]
                 counts[player_hc] += 1
 
             counts = counts.clip(min=1, max=sys.maxsize)
@@ -127,36 +129,36 @@ class CounterfactualRegretMinimizer(object):
             iter = np.nditer(reachprobs[root.player], flags=['f_index'])
             for p in iter:
                 hc = iter.index
-                next_reachprobs[root.player][hc] = action_probs[hc][FOLD] * p
+                next_reachprobs[root.player, hc] = action_probs[hc, FOLD] * p
             action_payoffs[FOLD] = self.cfr_helper(root.fold_action, next_reachprobs)
         if root.call_action:
             iter = np.nditer(reachprobs[root.player], flags=['f_index'])
             for p in iter:
                 hc = iter.index
-                next_reachprobs[root.player][hc] = action_probs[hc][CALL] * p
+                next_reachprobs[root.player, hc] = action_probs[hc, CALL] * p
             action_payoffs[CALL] = self.cfr_helper(root.call_action, next_reachprobs)
         if root.raise_action:
             iter = np.nditer(reachprobs[root.player], flags=['f_index'])
             for p in iter:
                 hc = iter.index
-                next_reachprobs[root.player][hc] = action_probs[hc][RAISE] * p
+                next_reachprobs[root.player, hc] = action_probs[hc, RAISE] * p
             action_payoffs[RAISE] = self.cfr_helper(root.raise_action, next_reachprobs)
         payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
         for player in range(self.rules.players):
             # iter = np.nditer(reachprobs[player], flags=['f_index'])
             # for p in iter:
-            #     payoffs[player][iter.index] = 0
+            #     payoffs[player, iter.index] = 0
 
             for action in range(3):
                 if not root.valid(action):
                    continue
                 for hand_index in range( range_size(self.rules) ):
-                    winnings = action_payoffs[action][player][hand_index]
+                    winnings = action_payoffs[action, player, hand_index]
                     # action_probs is baked into reachprobs for everyone except the acting player
                     if player == root.player:
-                        payoffs[player][hand_index] += winnings * action_probs[hand_index][action]
+                        payoffs[player, hand_index] += winnings * action_probs[hand_index, action]
                     else:
-                        payoffs[player][hand_index] += winnings
+                        payoffs[player, hand_index] += winnings
         # Update regret calculations
         self.cfr_regret_update(root, action_payoffs, payoffs[root.player])
         return payoffs
@@ -167,7 +169,7 @@ class CounterfactualRegretMinimizer(object):
             for hc in root.holecards[root.player]:
                 infoset = self.rules.infoset_format(root.player, hc, root.board, root.bet_history)
                 probs = default_strat.probs(infoset)
-                self.action_reachprobs[infoset][root.player] = reachprobs[root.player][cards_to_range_index(self.rules, hc)] * probs
+                self.action_reachprobs[infoset, root.player] = reachprobs[root.player, cards_to_range_index(self.rules, hc)] * probs
             return default_strat
         for hc in root.holecards[root.player]:
             infoset = self.rules.infoset_format(root.player, hc, root.board, root.bet_history)
@@ -180,9 +182,9 @@ class CounterfactualRegretMinimizer(object):
                 probs = nonzero_prev_cfr / sumpos_cfr
 
             self.current_profile.strategies[root.player].policy[infoset] = probs
-            self.action_reachprobs[infoset][root.player] += (probs * reachprobs[root.player][cards_to_range_index(self.rules, hc)])
+            self.action_reachprobs[infoset, root.player] += (probs * reachprobs[root.player, cards_to_range_index(self.rules, hc)])
             self.profile.strategies[root.player].policy[infoset] = \
-                self.action_reachprobs[infoset][root.player] / np.sum(self.action_reachprobs[infoset][root.player])
+                self.action_reachprobs[infoset, root.player] / np.sum(self.action_reachprobs[infoset, root.player])
 
         return self.current_profile.strategies[root.player]
 
@@ -192,7 +194,7 @@ class CounterfactualRegretMinimizer(object):
             if not root.valid(action):
                 continue
             for hand_index in range( range_size(self.rules) ):
-                winnings = action_payoffs[action][root.player][hand_index]
+                winnings = action_payoffs[action, root.player, hand_index]
                 immediate_cfr = winnings - ev[hand_index]
                 infoset = self.rules.infoset_format(root.player, range_index_to_cards(self.rules, hand_index), root.board, root.bet_history)
                 self.counterfactual_regret[infoset][root.player][action] += immediate_cfr
