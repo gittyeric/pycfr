@@ -145,10 +145,6 @@ class CounterfactualRegretMinimizer(object):
             action_payoffs[RAISE] = self.cfr_helper(root.raise_action, next_reachprobs)
         payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
         for player in range(self.rules.players):
-            # iter = np.nditer(reachprobs[player], flags=['f_index'])
-            # for p in iter:
-            #     payoffs[player, iter.index] = 0
-
             for action in range(3):
                 if not root.valid(action):
                    continue
@@ -177,7 +173,7 @@ class CounterfactualRegretMinimizer(object):
             nonzero_prev_cfr = np.clip(prev_cfr, 0, sys.maxsize)
             sumpos_cfr = np.sum(nonzero_prev_cfr)
             if sumpos_cfr == 0:
-                probs = self.equal_probs(root)
+                probs = self.equal_probs(len(root.children), root.fold_action, root.call_action, root.raise_action)
             else:
                 probs = nonzero_prev_cfr / sumpos_cfr
 
@@ -199,15 +195,15 @@ class CounterfactualRegretMinimizer(object):
                 infoset = self.rules.infoset_format(root.player, range_index_to_cards(self.rules, hand_index), root.board, root.bet_history)
                 self.counterfactual_regret[infoset][root.player][action] += immediate_cfr
 
-    def equal_probs(self, root):
-        total_actions = len(root.children)
+    @lru_cache(3*2*2*2)
+    def equal_probs(self, num_children, fold_action, call_action, raise_action):
         probs = np.zeros(3, np.longdouble)
-        if root.fold_action:
-            probs[FOLD] = 1.0 / total_actions
-        if root.call_action:
-            probs[CALL] = 1.0 / total_actions
-        if root.raise_action:
-            probs[RAISE] = 1.0 / total_actions
+        if fold_action:
+            probs[FOLD] = 1.0 / num_children
+        if call_action:
+            probs[CALL] = 1.0 / num_children
+        if raise_action:
+            probs[RAISE] = 1.0 / num_children
         return probs
 
 # Monty-Carlo flavors of CFR not supported in pyCFR Fast, but left here in case anyone wants a stab at refactoring into
