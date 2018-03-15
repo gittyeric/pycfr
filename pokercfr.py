@@ -116,14 +116,14 @@ class CounterfactualRegretMinimizer(object):
         # Calculate strategy from counterfactual regret
         strategy = self.cfr_strategy_update(root, reachprobs)
         next_reachprobs = np.copy(reachprobs)
-        action_probs = np.zeros((range_size(self.rules), 3), np.longdouble)
+        action_probs = np.empty((range_size(self.rules), 3), np.longdouble)
 
         iter = np.nditer(reachprobs[root.player], flags=['f_index'])
         for p in iter:
             cards = range_index_to_cards(self.rules, iter.index)
             p_view = self.rules.infoset_format(root.player, cards, root.board, root.bet_history)
             action_probs[iter.index] = strategy.probs(p_view)
-        action_payoffs = np.zeros((3, self.rules.players, range_size(self.rules)), np.longdouble)
+        action_payoffs = np.empty((3, self.rules.players, range_size(self.rules)), np.longdouble)
 
         if root.fold_action:
             iter = np.nditer(reachprobs[root.player], flags=['f_index'])
