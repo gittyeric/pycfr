@@ -10,7 +10,8 @@ def near(val, expected):
 def validate_strategy(s, filename):
     validation_strategy = Strategy(s.player)
     validation_strategy.load_from_file(filename)
-    assert(s.policy == validation_strategy.policy)
+    for key in validation_strategy.policy:
+        assert(np.array_equal(s.policy[key], validation_strategy.policy[key]))
 
 print('')
 print('')
@@ -112,16 +113,16 @@ leduc_gt.build()
 s0 = Strategy(0)
 s0.load_from_file('strategies/leduc/0.strat')
 # Test a couple of arbitrary values
-assert(s0.probs('J:/:') == [0.000000000, 0.927357111, 0.072642889])
-assert(s0.probs('KJ:/rrc/rr:') == [0.546821151, 0.453178849, 0.000000000])
+assert(np.array_equal(s0.probs('J:/:'), np.array([0.000000000, 0.927357111, 0.072642889], np.longdouble)))
+assert(np.array_equal(s0.probs('KJ:/rrc/rr:'), np.array([0.546821151, 0.453178849, 0.000000000])))
 # Verify we loaded all of infosets
 assert(len(s0.policy) == 144)
 
 s1 = Strategy(1)
 s1.load_from_file('strategies/leduc/1.strat')
 # Test a couple of arbitrary values
-assert(s1.probs('J:/r:') == [0.819456679, 0.125672407, 0.054870914])
-assert(s1.probs('KJ:/rrc/crr:') == [0.000031258, 0.999968742, 0.000000000])
+assert(np.array_equal(s1.probs('J:/r:'), np.array([0.819456679, 0.125672407, 0.054870914])))
+assert(np.array_equal(s1.probs('KJ:/rrc/crr:'), np.array([0.000031258, 0.999968742, 0.000000000])))
 # Verify we loaded all of infosets
 assert(len(s1.policy) == 144)
 
