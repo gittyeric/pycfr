@@ -35,7 +35,6 @@ class CounterfactualRegretMinimizer(object):
 
     def cfr(self):
         reachprobs = np.ones((self.rules.players, range_size(self.rules)))
-        # reachprobs *= 1.0 / self.rules.roundinfo[0].holecard_count
         self.cfr_helper(self.tree.root, reachprobs)
 
     def cfr_helper(self, root, reachprobs):
@@ -106,8 +105,8 @@ class CounterfactualRegretMinimizer(object):
         prevlen = 0 # Old op was pricey: len(list(reachprobs[0].keys())[0])
         possible_deals = float(choose(len(root.deck) - prevlen, root.todeal))
         payoffs = np.zeros((self.rules.players, range_size(self.rules)), np.longdouble)
+        next_reachprobs = reachprobs / possible_deals
         for bc in root.children:
-            next_reachprobs = reachprobs / possible_deals
             subpayoffs = self.cfr_helper(bc, next_reachprobs)
             payoffs += subpayoffs
         return payoffs
@@ -184,7 +183,6 @@ class CounterfactualRegretMinimizer(object):
 
         return self.current_profile.strategies[root.player]
 
-    # Todo: optimize!!!
     def cfr_regret_update(self, root, action_payoffs, ev):
         for action in range(3):
             if not root.valid(action):
@@ -192,8 +190,10 @@ class CounterfactualRegretMinimizer(object):
             for hand_index in range( range_size(self.rules) ):
                 winnings = action_payoffs[action, root.player, hand_index]
                 immediate_cfr = winnings - ev[hand_index]
-                infoset = self.rules.infoset_format(root.player, range_index_to_cards(self.rules, hand_index), root.board, root.bet_history)
-                self.counterfactual_regret[infoset][root.player][action] += immediate_cfr
+                if immediate_cfr != 0:
+                    cards = range_index_to_cards(self.rules, hand_index)
+                    infoset = self.rules.infoset_format(root.player, cards, root.board, root.bet_history)
+                    self.counterfactual_regret[infoset][root.player][action] += immediate_cfr
 
     @lru_cache(3*2*2*2)
     def equal_probs(self, num_children, fold_action, call_action, raise_action):
@@ -205,6 +205,28 @@ class CounterfactualRegretMinimizer(object):
         if raise_action:
             probs[RAISE] = 1.0 / num_children
         return probs
+
+class CFR_Plus(CounterfactualRegretMinimizer):
+    def __init__(self, rules):
+        CounterfactualRegretMinimizer.__init__(self, rules)
+
+    def cfr_regret_update(self, root, action_payoffs, ev):
+        modified_infosets = set()
+        for action in range(3):
+            if not root.valid(action):
+                continue
+            for hand_index in range( range_size(self.rules) ):
+                winnings = action_payoffs[action, root.player, hand_index]
+                immediate_cfr = winnings - ev[hand_index]
+                if immediate_cfr != 0:
+                    cards = range_index_to_cards(self.rules, hand_index)
+                    infoset = self.rules.infoset_format(root.player, cards, root.board, root.bet_history)
+                    self.counterfactual_regret[infoset][root.player][action] += immediate_cfr
+                    modified_infosets.add(infoset)
+
+        # Do CFR+
+        for infoset in modified_infosets:
+            np.clip(self.counterfactual_regret[infoset][root.player], 0, sys.maxsize, self.counterfactual_regret[infoset][root.player])
 
 # Monty-Carlo flavors of CFR not supported in pyCFR Fast, but left here in case anyone wants a stab at refactoring into
 # numpy vector operations (maybe easier than you think in most cases?)
