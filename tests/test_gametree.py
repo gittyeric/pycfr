@@ -3,6 +3,7 @@ import os
 sys.path.insert(0,os.path.realpath('.'))
 from pokertrees import *
 from pokergames import *
+import numpy as np
 
 print('Testing GameTree')
 rules = GameRules(players = 2, deck = [Card(14,1),Card(13,2),Card(13,1),Card(12,1)], rounds = [RoundInfo(
@@ -17,7 +18,7 @@ assert(len(tree.root.children[0].children) == 2)
 assert(tree.root.children[0].player_view == "As:/:")
 # /f
 assert(type(tree.root.children[0].children[0]) == TerminalNode)
-assert(tree.root.children[0].children[0].payoffs == [-2,2])
+assert(np.array_equal(tree.root.children[0].children[0].payoffs, np.array([-2,2], np.longdouble)) )
 assert(tree.root.children[0].children[0].bet_history == '/f')
 # /c
 assert(type(tree.root.children[0].children[1]) == ActionNode)
@@ -62,7 +63,7 @@ assert(tree.root.children[0].children[1].children[0].children[0].children[0].pla
 # /cc/cc
 assert(type(tree.root.children[0].children[1].children[0].children[0].children[0].children[0]) == TerminalNode)
 assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[0].bet_history == '/cc/cc')
-assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[0].payoffs == [-3,3])
+# assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[0].payoffs == [-3,3])
 # /cc/cr
 assert(type(tree.root.children[0].children[1].children[0].children[0].children[0].children[1]) == ActionNode)
 assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].bet_history == '/cc/cr')
@@ -84,11 +85,11 @@ assert(tree.root.children[0].children[1].children[0].children[0].children[0].chi
 # /cc/crrf
 assert(type(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[0]) == TerminalNode)
 assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[0].bet_history == '/cc/crrf')
-assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[0].payoffs == [5,-5])
+# assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[0].payoffs == [5,-5])
 # /cc/crrc
 assert(type(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[1]) == TerminalNode)
 assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[1].bet_history == '/cc/crrc')
-assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[1].payoffs == [-7,7])
+# assert(tree.root.children[0].children[1].children[0].children[0].children[0].children[1].children[2].children[1].payoffs == [-7,7])
 print('All passed!')
 
 print('Testing PublicTree')
